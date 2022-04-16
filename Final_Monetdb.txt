@@ -1,0 +1,197 @@
+    create LOADER test3_load() LANGUAGE PYTHON {
+        import pandas as pd
+        import numpy as np 
+        path="C:/Users/User/OneDrive - aueb.gr/Επιφάνεια εργασίας/Msc/Large scale data managment/zillow.csv"
+        df=pd.read_csv(path)
+        df.rename(columns={"facts and features": "fnfs"},inplace=True)
+        df.title.replace(np.nan,'UNK',inplace=True)
+        dicted_df=dict(df)
+        _emit.emit( { 'title' : df.iloc[:,0].tolist(), 'address' : df.iloc[:,1].tolist(), 'city' : df.iloc[:,2].tolist(), 'state' : df.iloc[:,3].tolist(), 'postal_code' : df.iloc[:,4].tolist(), 'price' : df.iloc[:,5].tolist(), 'fnfs' : df.iloc[:,6].tolist(), 'estate ' : df.iloc[:,7].tolist(), 'url ' : df.iloc[:,8].tolist()})
+    };
+CREATE TABLE zillow2 FROM LOADER test3_load();
+select * from zillow2 limit 10;
+
+
+
+---------------
+
+
+CREATE FUNCTION Num_beds (i STRING) RETURNS INTEGER LANGUAGE PYTHON
+{
+all_beds=[]
+for k in i:
+
+    all_beds.append('0' if k.split()[0]=='None' else k.split()[0])
+		
+return all_beds
+};
+
+
+select city,price,Num_beds(fnfs) as number_of_beds  from zillow2 limit 10;
+
+
+
+--------------
+
+
+CREATE FUNCTION Num_baths (i STRING) RETURNS FLOAT LANGUAGE PYTHON
+{
+all_beds=[]
+for k in i:
+	all_beds.append(float('0' if k.split()[2]=='None' else k.split()[2]))
+		
+return all_beds
+};
+
+
+select city,price,Num_baths(fnfs) as number_of_baths  from zillow2 limit 10;
+
+
+--------------
+
+
+CREATE FUNCTION Sqft1 (i STRING) RETURNS float LANGUAGE PYTHON
+{
+all_beds=[]
+for k in i:
+	all_beds.append(float('0' if k.split()[4][1:len(k.split()[4])]=='None' else k.split()[4][1:len(k.split()[4])]))
+		
+return all_beds
+};
+
+
+select city,price,Sqft1(fnfs) as sqft  from zillow2 limit 10;
+
+
+
+--------------
+CREATE FUNCTION types (i STRING) RETURNS STRING LANGUAGE PYTHON
+{
+ty=[]
+for k in i:
+	ty.append(k.split()[0])
+		
+return ty
+};
+
+
+select city,price,types(title) as type  from zillow2 limit 10;
+
+
+--------------
+
+
+CREATE FUNCTION of_types (i STRING) RETURNS STRING LANGUAGE PYTHON
+{
+offers=[]
+for k in i:
+    a=k.split()
+    a = [w.replace(',', '') for w in a]
+    for j in range(len(a)):
+        if a[j]=="sale":
+            offers.append("sale")
+            break
+        elif a[j]=="rent":
+            offers.append("rent")
+            
+        elif a[j]=="sold":
+            offers.append("sold")
+            break
+            
+        elif a[j]=="forclose":
+            offers.append("forclose")
+            break
+        else:
+            offers.append("sale")
+            break
+            
+            
+return offers
+};
+
+
+select city,price,of_types(title) as type  from zillow2 limit 10;
+
+
+
+------------------------
+
+
+select * from zillow2 where of_types(title) like '%sale%' limit 20;
+
+
+
+------------------------
+
+
+CREATE FUNCTION clear_price (i STRING) RETURNS INTEGER LANGUAGE PYTHON
+{
+
+prices=[]
+for k in i:
+    k=k.replace(',', '')
+    k=k.replace('+', '')
+    k=k.replace('$', '') 
+    prices.append(int(k))
+
+return prices
+};
+
+
+select city,clear_price(price) as Price  from zillow2 limit 10;
+
+
+
+
+------------------------
+
+select city,clear_price(price) as clear_price ,Num_beds(fnfs) as Beds_Number from zillow2 where Num_beds(fnfs)<11 limit 10;
+
+
+------------------------
+
+
+select clear_price(price) as clear_price from zillow2 where clear_price(price) between 100000 and 20000000 limit 10;
+
+
+
+
+------------------------
+
+
+select title from zillow2 where title like '%house%' or title like '%House%' limit 10 ;
+
+
+
+------------------------
+
+select Num_beds(fnfs) as Number_of_Beds , avg(clear_price(price)/Sqft1(fnfs)) as average_price_per_sqft  from zillow2 where title like '%House for sale%'  group by Num_beds(fnfs) limit 10 ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
